@@ -67,6 +67,46 @@ File descriptors are normally small non-negative integers that the kernel uses t
 
 By convention, all shells open three descriptors whenever a new program is run: standard input, standard output, and standard error. If nothing special is done, as in the simple command ls then all three are connected to the terminal.
 
+Unbuffered I/O is provided by the functions open, read, write, lseek, and close. These functions all work with file descriptors.
+
+```c
+int n;
+char    buf[BUFFSIZE];
+n = read(STDIN_FILENO, buf, BUFFSIZE)) > 0
+write(STDOUT_FILENO, buf, n) != n
+```
+
+The <unistd.h> header, included by apue.h, and the two constants STDIN_FILENO and STDOUT_FILENO are part of the POSIX standard
+
+####Standard I/O
+
+The standard I/O functions provide a buffered interface to the unbuffered I/O functions. Using standard I/O relieves us from having to choose optimal buffer sizes, such as the BUFFSIZE constant in Figure 1.4. The standard I/O functions also simplify dealing with lines of input (a common occurrence in UNIX applications).
+
+The most common standard I/O function is printf. In programs that call printf, we’ll always include <stdio.h>
+
+```c
+int c;
+while ((c = getc(stdin)) != EOF)
+   if (putc(c, stdout) == EOF){
+       printf("output error");
+       exit(1);
+}
+```
+
+1.6 Programs and Processes
+--------------------------
+
+####Program
+A program is an executable file residing on disk in a directory. A program is read into memory and is executed by the kernel as a result of one of the seven exec functions.
+
+An executing instance of a program is called a process,
+Some operating systems use the term task to refer to a program that is being executed
+
+
+
+
+
+
 
 
 
