@@ -222,6 +222,8 @@ Signals are a technique used to notify a process that some condition has occurre
 #####man signal
 #####man kill
 
+####shell2.c
+
 ```c
 #include "apue.h"
 #include <sys/wait.h>
@@ -283,24 +285,106 @@ sig_int(int signo)
 }
 ```
 
+####testing signals
+```c
+#include "stdio.h"
+#include "stdlib.h"
+#include <unistd.h>
+#include <signal.h>
+#include "sys/wait.h"
+
+int main() 
+{
+	int pid;
+	int status;
+	int tf = 10000;
+
+	for(int sig = 1; sig < 32; sig++) 
+	{
+		// printf("--- sig %d\n", sig);
+
+		if ((pid = fork()) < 0) 
+		{
+			printf("fork error.\n");
+			exit(1);
+
+		} else if (pid == 0) /* child */
+		{ 
+			// printf("mypid %d\n", getpid());
+			// usleep(2*tf);
+			printf("sig %d didnt killed me\n", sig);
+			exit(0);
+		}
+		
+		// parent
+		// usleep(1*tf);
+		if ((kill(pid, sig) == -1)){
+			perror("kill error");
+			exit(1);
+		}
+
+		// usleep(3*tf);
+	}
+}
+```
+
+1.10 Time Values
+----------------
+
+Historically, UNIX systems have maintained two different time values:
+
+1. Calendar time. This value counts the number of seconds since the Epoch: 00:00:00 January 1, 1970, Coordinated Universal Time (UTC).
+
+2. Process time. This is also called CPU time and measures the central processor resources used by a process. Process time is measured in clock ticks, which have historically been 50, 60, or 100 ticks per second.
+
+UNIX System maintains three values for a process:
+* Clock time: The clock time, sometimes called wall clock time, is the amount of time the process takes to run
+* User CPU time: CPU time attributed to user instructions.
+* System CPU time: CPU time attributed to the kernel when it executes on behalf of the process.
+
+The sum of user CPU time and system CPU time is often called the CPU time.
+
+from http://en.wikipedia.org/wiki/CPU_time:
+
+CPU time or CPU usage can be reported either for each thread, for each process or for the entire system. Moreover, depending on what exactly the CPU was doing, the reported values can be subdivided in:
+
+* User time is the amount of time the CPU was busy executing code in user space.
+* System time is the amount of time the CPU was busy executing code in kernel space. If this value is reported for a thread or process, then it represents the amount of time the kernel was doing work on behalf of the executing context, for example, after a thread issued a system call.
+* Idle time (for the whole system only) is the amount of time the CPU was not busy, or, otherwise, the amount of time it executed the system idle process. Idle time actually measures unused CPU capacity.
+* Steal time (for the whole system only), on virtualized hardware, is the amount of time the operating system wanted to execute, but was not allowed to by the hypervisor.[1] This can happen if the physical hardware runs multiple guest operating system and the hypervisor chose to allocate a CPU time slot to another one.
 
 
+####nextPrimeNumber.c
+```c
+#include <stdio.h>
+#include <stdlib.h>
+ 
+int isPrimeNumber(unsigned long int n){
+  int i;
+  for(i=2; i<=(n>>1); i++)
+    if(n%i==0) return 0;
+  return 1;
+}
+ 
+int main(int argc, char *argv[]){
+  unsigned long int argument = strtoul(argv[1], NULL, 10), n = argument;
+  while(!isPrimeNumber(++n));
+ 
+  printf("Prime number greater than %d is %d\n", argument, n);
+  return 0;
+}
+```
 
+```bash
+gcc nextPrimeNumber.c -o nextPrimeNumber
 
+tom@mobile:~/prog/books/apue/apue-estudy$ time ./nextPrimeNumber 1000000000
+Prime number greater than 1000000000 is 1000000007
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+real	0m4.963s
+user	0m4.960s
+sys	0m0.003s
+```
 
 
 
