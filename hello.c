@@ -6,6 +6,6 @@
 int
 main(void)
 {
-	printf("hello world from process ID %ld\n", (long)getpid());
+	printf("process ID %ld, process group ID %ld\n", (long)getpid(), (long)getpgid(getpid()));
 	exit(0);
 }

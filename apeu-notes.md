@@ -100,7 +100,201 @@ while ((c = getc(stdin)) != EOF)
 A program is an executable file residing on disk in a directory. A program is read into memory and is executed by the kernel as a result of one of the seven exec functions.
 
 An executing instance of a program is called a process,
+
 Some operating systems use the term task to refer to a program that is being executed
+
+The UNIX System guarantees that every process has a unique numeric identifier called the process ID. The process ID is always a non-negative integer.
+
+####Process Control
+There are three primary functions for process control: fork, exec, and waitpid. (The exec function has seven variants, but we often refer to them collectively as simply the exec function.)
+
+####shell1.c
+```c
+#include "apue.h"
+#include <sys/wait.h>
+
+int
+main(void)
+{
+	char	buf[MAXLINE];	/* from apue.h */
+	pid_t	pid;
+	int		status;
+
+	printf("%% ");	/* print prompt (printf requires %% to print %) */
+	while (fgets(buf, MAXLINE, stdin) != NULL) {
+		if (buf[strlen(buf) - 1] == '\n')
+			buf[strlen(buf) - 1] = 0; /* replace newline with null */
+
+		if ((pid = fork()) < 0) {
+			err_sys("fork error");
+		} else if (pid == 0) {		/* child */
+			execlp(buf, buf, (char *)0);
+			err_ret("couldn't execute: %s", buf);
+			exit(127);
+		}
+
+		/* parent */
+		if ((pid = waitpid(pid, &status, 0)) < 0)
+			err_sys("waitpid error");
+		printf("%% ");
+	}
+	exit(0);
+}
+```
+
+```c
+	pid_t fork(void):
+		0: child.
+		>0: parent, with pid_t being the child pid
+
+	int execlp(const char *path, const char *arg0, ..., NULL);
+	/* http://support.sas.com/documentation/onlinedoc/sasc/doc/lr2/execlp.htm :
+	Like all of the exec functions, execlp replaces the calling process image with a new process image. This has the effect of running a new program with the process ID of the calling process. Note that a new process is not started; the new process image simply overlays the original process image. The execlp function is most commonly used to overlay a process image that has been created by a call to the fork function.*/
+
+	pid_t waitpid(pid_t pid, int *stat_loc, int options);
+```
+
+We use the standard I/O function fgets to read one line at a time from the standard input. When we type the end-of-file character (which is often Control-D) as the first character of a line, fgets returns a null pointer, the loop stops, and the process terminates.
+
+We call fork to create a new process, which is a copy of the caller. 
+
+Then fork returns the non-negative process ID of the new child process to the parent, and returns 0 to the child.
+
+Because fork creates a new process, we say that it is called once by the parent but returns twice, in the parent and in the child.
+
+In the child, we call execlp to execute the command that was read from the standard input. This replaces the child process with the new program file. 
+
+The combination of fork followed by exec is called spawning a new process on some operating systems.
+
+Because the child calls execlp to execute the new program file, the parent wants to wait for the child to terminate. This is done by calling waitpid, specifying which process to wait for: the pid argument, which is the process ID of the child.
+
+####Threads and Thread IDs
+
+Usually, a process has only one thread of control, one set of machine instructions executing at a time. 
+
+Some problems are easier to solve when more than one thread of control can operate on different parts of the problem. 
+
+Additionally, multiple threads of control can exploit the parallelism possible on multiprocessor systems.
+
+All threads within a process share the same address space, file descriptors, stacks, and process-related attributes. Each thread executes on its own stack, although any thread can access the stacks of other threads in the same process. 
+
+Because they can access the same memory, the threads need to synchronize access to shared data among themselves to avoid inconsistencies.
+
+Like processes, threads are identified by IDs. Thread IDs, however, are local to a process. A thread ID from one process has no meaning in another process. We use thread IDs to refer to specific threads as we manipulate the threads within a process.
+
+Functions to control threads parallel those used to control processes
+
+
+1.7 Error Handling
+------------------
+
+When an error occurs in one of the UNIX System functions, a negative value is often returned, and the integer errno is usually set to a value that tells why.
+
+in an environment that supports threads, the process address space is shared among multiple threads, and each thread needs its own local copy of errno to prevent one thread from interfering with another. Linux, for example, supports multithreaded access to errno by defining it as
+	extern int *__errno_location(void); #define errno (*__errno_location())
+
+errno. First, its value is never cleared by a routine if an error does not occur.
+the value of errno is never set to 0 by any of the functions, and none of the constants defined in <errno.h> has a value of 0.
+
+```c
+char *strerror(int errnum); // maps errnum into an error message string and returns a pointer to the string.
+void perror(const char *msg); // produces an error message on the standard error, based on the current value of errno, and returns.
+```
+
+1.8 User Identification
+-----------------------
+
+With every file on disk, the file system stores both the user ID and the group ID of a file’s owner.
+
+Storing both of these values requires only four bytes, assuming that each is stored as a two-byte integer. 
+
+####Supplementary Group IDs
+
+These supplementary group IDs are obtained at login time by reading the file /etc/group and finding the first 16 entries that list the user as a member.
+
+POSIX requires that a system support at least 8 supplementary groups per process, but most systems support at least 16.
+
+1.9 Signals
+-----------
+
+Signals are a technique used to notify a process that some condition has occurred.
+
+#####man signal
+#####man kill
+
+```c
+#include "apue.h"
+#include <sys/wait.h>
+
+static void	sig_int(int);		/* our signal-catching function */
+
+void
+sig_x(int x)
+{
+	printf("received signal %d\n", x);
+}
+
+int
+main(void)
+{
+	char	buf[MAXLINE];	/* from apue.h */
+	pid_t	pid;
+	int		status;
+
+	if (signal(SIGINT, sig_int) == SIG_ERR)
+		err_sys("signal error");
+
+	for(int x = 1; x<32; x++){
+		printf("%d\n", x);
+		if (x != 9 && x != 17){
+			if (signal(x, sig_x) == SIG_ERR)
+				err_sys("signal error");		
+		}
+	}
+
+	printf("pid %d\n", getpid());
+
+	printf("%% ");	/* print prompt (printf requires %% to print %) */
+	
+	while (fgets(buf, MAXLINE, stdin) != NULL) {
+		if (buf[strlen(buf) - 1] == '\n')
+			buf[strlen(buf) - 1] = 0; /* replace newline with null */
+
+		if ((pid = fork()) < 0) {
+			err_sys("fork error");
+		} else if (pid == 0) {		/* child */
+			execlp(buf, buf, (char *)0);
+			err_ret("couldn't execute: %s", buf);
+			exit(127);
+		}
+
+		/* parent */
+		if ((pid = waitpid(pid, &status, 0)) < 0)
+			err_sys("waitpid error");
+		printf("%% ");
+	}
+	exit(0);
+}
+
+void
+sig_int(int signo)
+{
+	printf("interrupt\n%% ");
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
