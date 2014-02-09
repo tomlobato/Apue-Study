@@ -63,5 +63,10 @@ SEE ALSO    A list of related commands or functions.
 1.5 Input and Output
 ---------------------
 
+File descriptors are normally small non-negative integers that the kernel uses to identify the files accessed by a process. Whenever it opens an existing file or creates a new file, the kernel returns a file descriptor that we use when we want to read or write the file.
+
+By convention, all shells open three descriptors whenever a new program is run: standard input, standard output, and standard error. If nothing special is done, as in the simple command ls then all three are connected to the terminal.
+
+
 
 
