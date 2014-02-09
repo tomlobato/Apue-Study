@@ -1,5 +1,5 @@
-
 1.2 UNIX Architecture
+=====================
 
 In a strict sense, an operating system can be defined as the software that controls the hardware resources of the computer and provides an environment under which programs can run.
 
@@ -7,6 +7,7 @@ The interface to the kernel is a layer of software called the system calls
 
 
 1.3 Logging in
+==============
 
 The shell is a special application that provides an interface for running other applications.
 A shell is a command-line interpreter that reads user input and executes commands
@@ -14,10 +15,12 @@ The user input to a shell is normally from the terminal (an interactive shell) o
 
 
 1.4 Files and Directories
+=========================
 
 The only two characters that cannot appear in a filename are the slash character (/) and the null character
 for portability, POSIX.1 recommends restricting filenames to consist of the following characters: letters (a-z, A-Z), numbers (0-9), period (.), dash (-), and underscore (_).
 
+```c
 #include <dirent.h>
 
 DIR             *dp;
@@ -27,6 +30,7 @@ dp = opendir str
 dirp = readdir dp
 dirp->d_name
 closedir dp
+```
 
 --- MAN ---
 man on Research Unix, BSD, OS X and Linux:
@@ -50,6 +54,7 @@ SEE ALSO
 ---
 
 1.5 Input and Output
+====================
 
 
 
