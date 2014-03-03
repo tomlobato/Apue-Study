@@ -469,11 +469,11 @@ The term unbuffered means that each read or write invokes a system call in the k
 3.3 open and openat Functions
 -----------------------------
 
-``c
+```c
 #include <fcntl.h>
 int open(const char *path, int oflag, ... /* mode_t mode */ );
 int openat(int fd, const char *path, int oflag, ... /* mode_t mode */ );
-``
+```
 
 One and only one of these five constants must be specified:
 O_RDONLY
@@ -482,15 +482,15 @@ O_RDWR
 O_EXEC
 O_SEARCH (not suported by main unixes)
 
-- *O_CREAT Create the file if it doesn’t exist. This option requires a third argument to the open function (a fourth argument to the openat function) — the mode
-- *O_EXCL Generate an error if O_CREAT is also specified and the file already exists.
-- *O_NOFOLLOW Generate an error if path refers to a symbolic link
-- *O_SYNC Have each write wait for physical I/O to complete, including I/O necessary to update file attributes modified as a result of the write
+- O_CREAT Create the file if it doesn’t exist. This option requires a third argument to the open function (a fourth argument to the openat function) — the mode
+- O_EXCL Generate an error if O_CREAT is also specified and the file already exists.
+- O_NOFOLLOW Generate an error if path refers to a symbolic link
+- O_SYNC Have each write wait for physical I/O to complete, including I/O necessary to update file attributes modified as a result of the write
 
 not fully portable:
 
-- *O_DSYNC Have each write wait for physical I/O to complete, but don’t wait for file attributes to be updated if they don’t affect the ability to read the data just written.
-- O_RSYNC *Have each read operation on the file descriptor wait until any pending writes for the same portion of the file are complete.
+- O_DSYNC Have each write wait for physical I/O to complete, but don’t wait for file attributes to be updated if they don’t affect the ability to read the data just written.
+- O_RSYNC Have each read operation on the file descriptor wait until any pending writes for the same portion of the file are complete.
 
 The file descriptor returned by open and openat is guaranteed to be the lowest- numbered unused descriptor.
 This fact is used by some applications to open a new file on standard input, standard output, or standard error. For example, an application might close standard output—normally, file descriptor 1—and then open another file, knowing that it will be opened on file descriptor 1.
@@ -509,10 +509,10 @@ The basic idea behind TOCTTOU errors is that a program is vulnerable if it makes
 
 3.4 creat
 
-``c
+```c
 #include <fcntl.h>
 int creat(const char *path, mode_t mode);
-``
+```
 
 same as:
 
@@ -538,10 +538,10 @@ The offset can be positive or negative.
 Because a successful call to lseek returns the new file offset, we can seek zero bytes
 from the current position to determine the current offset:
 
-``c
+```c
    off_t    currpos;
    currpos = lseek(fd, 0, SEEK_CUR);
-``
+```
 
 This technique can also be used to determine if a file is capable of seeking. If the file descriptor refers to a pipe, FIFO, or socket, lseek sets errno to ESPIPE and returns −1.
 
