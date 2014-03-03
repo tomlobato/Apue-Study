@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>3AF4615E-7A01-46A8-B258-0DFEA26AAC42</string>
+	<key>IDESourceControlProjectName</key>
+	<string>xc</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>39F21004-BD1F-48D2-A4A2-8986782C3A96</key>
+		<string>https://github.com/tomlobato/Apue-Study.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>xc/xc.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>39F21004-BD1F-48D2-A4A2-8986782C3A96</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/tomlobato/Apue-Study.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>39F21004-BD1F-48D2-A4A2-8986782C3A96</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>39F21004-BD1F-48D2-A4A2-8986782C3A96</string>
+			<key>IDESourceControlWCCName</key>
+			<string>apue-estudy</string>
+		</dict>
+	</array>
+</dict>
+</plist>
