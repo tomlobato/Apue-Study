@@ -562,7 +562,7 @@ The kernel uses three data structures to represent an open file, and the relatio
 
 3. Each open file (or device) has a v-node structure (whitin v-node table) that contains information about the type of file and pointers to functions that operate on the file. For most files, the v-node also contains the i-node for the file.
 
-```
+```c
 proc table:[ 
 	proc1:
 		...
@@ -629,7 +629,7 @@ ssize_t pwrite(int fd, const void *buf, size_t nbytes, off_t offset);
 
 An existing file descriptor is duplicated by either of the following functions:
 
-```
+```c
 #include <unistd.h>
 int dup(int fd);
 int dup2(int fd, int fd2);
@@ -648,7 +648,7 @@ The new file descriptor that is returned as the value of the functions shares th
 
 Traditional implementations of the UNIX System have a buffer cache or page cache in the kernel through which most disk I/O passes. When we write data to a file, the data is normally copied by the kernel into one of its buffers and queued for writing to disk at some later time. This is called **delayed write**.
 
-```
+```c
 #include <unistd.h> 
 
 // The function fsync refers only to a single file, specified by the file descriptor fd, and waits for the disk writes to complete before returning.
@@ -666,7 +666,7 @@ void sync(void);
 
 The fcntl function can change the properties of a file that is **already open**:
 
-```
+```c
 #include <fcntl.h>
 int fcntl(int fd, int cmd, ... /* int arg */ );
 ```
@@ -710,7 +710,7 @@ File status flag:
 
 The ioctl function has always been the catchall for I/O operations. Anything that couldn’t be expressed using one of the other functions in this chapter usually ended up being specified with an ioctl. Terminal I/O was the biggest user of this function.
 
-```
+```c
 #include <unistd.h>     /* System V */
 #include <sys/ioctl.h>  /* BSD and Linux */
 int ioctl(int fd, int request, ...);
