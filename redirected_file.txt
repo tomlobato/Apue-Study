@@ -1,0 +1,3 @@
+fd2 = 4 STDOUT_FILENO = 1
+Hello
+Hello

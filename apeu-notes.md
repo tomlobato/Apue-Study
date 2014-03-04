@@ -549,3 +549,180 @@ This technique can also be used to determine if a file is capable of seeking. If
 3.10 File Sharing
 =================
 
+The kernel uses three data structures to represent an open file, and the relationships among them determine the effect one process has on another with regard to file sharing.
+
+1. Within each process table entry is a table of open file descriptors, that holds:
+- The file descriptor flags
+- A pointer to a file table entry
+
+2. The kernel maintains a file table for all **open files**. Each file table entry contains:
+- The file status flags for the file, such as read, write, append, sync, and nonblocking
+- The current file offset
+- A pointer to the v-node table entry for the file
+
+3. Each open file (or device) has a v-node structure (whitin v-node table) that contains information about the type of file and pointers to functions that operate on the file. For most files, the v-node also contains the i-node for the file.
+
+```
+proc table:[ 
+	proc1:
+		...
+		...
+		file descriptors:[
+			{
+				file descritor flags: 101001,
+				"open file table" pointer: oft *
+			},
+		]
+	proc2:...
+]
+
+open file table:[
+	open file 1: {
+		file status flags: read, write, append, sync, and nonblocking,
+		current offset: 0x123,
+		v-node* pointer: v-node *
+	}
+]
+
+v-node* table:[
+	v-node 1:{
+		inode:{
+			size: 123,
+			data pointer: 234,
+		}
+	}
+]
+
+v-node* -> not necessarily a v-node. In Linux it is a fs independent i-node.
+
+```
+
+> Linux has no v-node. Instead, a generic i-node structure is used. Although the implementations differ, the v-node is conceptually the same as a generic i-node. Both point to an i-node structure specific to the file system.
+
+> The v-node was invented to provide support for multiple file system types on a single computer system. Instead of splitting the data structures into a v-node and an i-node, Linux uses a file system–independent i-node and a file system–dependent i-node.
+
+Each process that opens the file gets its own file table entry, but only a single v-node table entry is required for a given file. One reason each process gets its own file table entry is so that each process has its own current offset for the file.
+
+It is possible for more than one file descriptor entry to point to the same file table entry, as we’ll see when we discuss the dup function in Section 3.12. This also happens after a fork when the parent and the child share the same file table entry for each open descriptor (Section 8.3).
+
+Note the difference in scope between the file descriptor flags and the file status flags. The former apply only to a single descriptor in a single process, whereas the latter apply to all descriptors in any process that point to the given file table entry.
+
+3.11 Atomic Operations
+======================
+
+pread and pwrite Functions
+--------------------------
+
+The Single UNIX Specification includes two functions that allow applications to seek
+and perform I/O atomically: pread and pwrite.
+
+```c
+#include <unistd.h>
+ssize_t pread(int fd, void *buf, size_t nbytes, off_t offset);
+
+ssize_t pwrite(int fd, const void *buf, size_t nbytes, off_t offset); 
+```
+
+
+3.12 dup and dup2 Functions
+===========================
+
+An existing file descriptor is duplicated by either of the following functions:
+
+```
+#include <unistd.h>
+int dup(int fd);
+int dup2(int fd, int fd2);
+```
+
+The new file descriptor returned by dup is guaranteed to be the lowest-numbered available file descriptor. With dup2, we specify the value of the new descriptor with the fd2 argument. If fd2 is already open, it is first closed. If fd equals fd2, then dup2 returns fd2 without closing it. Otherwise, the FD_CLOEXEC file descriptor flag is cleared for fd2, so that fd2 is left open if the process calls exec.
+
+The new file descriptor that is returned as the value of the functions shares the same file table entry as the fd argument.
+
+> dup_example.c
+> redirect.c
+
+
+3.13 sync, fsync, and fdatasync Functions
+==
+
+Traditional implementations of the UNIX System have a buffer cache or page cache in the kernel through which most disk I/O passes. When we write data to a file, the data is normally copied by the kernel into one of its buffers and queued for writing to disk at some later time. This is called **delayed write**.
+
+```
+#include <unistd.h> 
+
+// The function fsync refers only to a single file, specified by the file descriptor fd, and waits for the disk writes to complete before returning.
+int fsync(int fd); 
+
+// The fdatasync function is similar to fsync, but it affects only the data portions of a file. With fsync, the file’s attributes are also updated synchronously.
+int fdatasync(int fd);
+
+// The sync function simply queues all the modified block buffers for writing and returns; it does not wait for the disk writes to take place.
+void sync(void);
+```
+
+3.14 fcntl Function
+==
+
+The fcntl function can change the properties of a file that is **already open**:
+
+```
+#include <fcntl.h>
+int fcntl(int fd, int cmd, ... /* int arg */ );
+```
+
+The fcntl function is used for five different purposes.
+1. Duplicate an existing descriptor (cmd = F_DUPFD or F_DUPFD_CLOEXEC)
+2. Get/set file descriptor flags (cmd = F_GETFD or F_SETFD)
+3. Get/set file status flags (cmd = F_GETFL or F_SETFL)
+4. Get/set asynchronous I/O ownership (cmd = F_GETOWN or F_SETOWN)
+5. Get/set record locks (cmd = F_GETLK, F_SETLK, or F_SETLKW)
+
+- F_DUPFD duplicate fd
+- F_DUPFD_CLOEXEC duplicate fd, setting CLOEXEC
+- F_GETFD get fd flags
+- F_SETFD set fd flags
+- F_GETFL get file status flags
+- F_SETFL set file statu flags
+- F_GETOWN Get the process ID or process group ID currently receiving the SIGIO and SIGURG signals.
+- F_SETOWN Set the process ID or process group ID to receive the SIGIO and SIGURG signals. A positive arg specifies a process ID. A negative arg implies a process group ID equal to the absolute value of arg.
+
+All commands return −1 on an error or some other value if OK.
+
+File status flag:
+
+* O_RDONLY open for reading only
+* O_WRONLY open for writing only
+* O_RDWR open for reading and writing 
+* O_EXEC open for execute only
+* O_SEARCH open directory for searching only
+
+* O_APPEND append on each write
+* O_NONBLOCK nonblocking mode
+* O_SYNC wait for writes to complete (data and attributes)
+* O_DSYNC wait for writes to complete (data only)
+* O_RSYNC synchronize reads and writes
+* O_FSYNC wait for writes to complete (FreeBSD and Mac OS X only) 
+* O_ASYNC asynchronous I/O (FreeBSD and Mac OS X only)
+
+3.15 ioctl Function
+==
+
+The ioctl function has always been the catchall for I/O operations. Anything that couldn’t be expressed using one of the other functions in this chapter usually ended up being specified with an ioctl. Terminal I/O was the biggest user of this function.
+
+```
+#include <unistd.h>     /* System V */
+#include <sys/ioctl.h>  /* BSD and Linux */
+int ioctl(int fd, int request, ...);
+```
+
+Each device driver can define its own set of ioctl commands.
+
+ex: We use the ioctl function in Section 18.12 to fetch and set the size of a terminal’s window
+
+
+
+
+
+
+

@@ -25,7 +25,7 @@ void writen(int fd, char * buf, int size){
 }
 int main(void)
 {
-    int fd;
+    int fd, fd2, i = 0;
     char buf[] = "abcdefghij";
     
     if (chdir("/Users/tom/prog/books/apue/apue-estudy/stage")) {
@@ -33,7 +33,7 @@ int main(void)
         exit (errno);
     }
     
-    fd = open("hole.dat", O_RDWR | O_CREAT, S_IRWXU);
+    fd = open("hole.dat", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     
     writen(fd, buf, 10);
     show_offset(fd);
@@ -51,6 +51,9 @@ int main(void)
     writen(fd, buf, 1);
     show_offset(fd);
 
+    fd2 = open("hole2.dat", O_RDWR | O_CREAT, S_IRWXU);
+    while (i++ < pow(10, 6) + 1) write(fd2, "a", 1);
+    
     close(fd);
     exit(0);
 }
