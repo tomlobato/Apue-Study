@@ -651,15 +651,17 @@ Traditional implementations of the UNIX System have a buffer cache or page cache
 ```c
 #include <unistd.h> 
 
-// The function fsync refers only to a single file, specified by the file descriptor fd, and waits for the disk writes to complete before returning.
 int fsync(int fd); 
 
-// The fdatasync function is similar to fsync, but it affects only the data portions of a file. With fsync, the file’s attributes are also updated synchronously.
+synchronously.
 int fdatasync(int fd);
 
-// The sync function simply queues all the modified block buffers for writing and returns; it does not wait for the disk writes to take place.
 void sync(void);
 ```
+
+- The function fsync refers only to a single file, specified by the file descriptor fd, and waits for the disk writes to complete before returning.
+- The fdatasync function is similar to fsync, but it affects only the data portions of a file. With fsync, the file’s attributes are also updated 
+- The sync function simply queues all the modified block buffers for writing and returns; it does not wait for the disk writes to take place.
 
 3.14 fcntl Function
 ==
@@ -719,6 +721,15 @@ int ioctl(int fd, int request, ...);
 Each device driver can define its own set of ioctl commands.
 
 ex: We use the ioctl function in Section 18.12 to fetch and set the size of a terminal’s window
+
+3.16 /dev/fd
+==
+
+Newer systems provide a directory named /dev/fd whose entries are files named 0, 1, 2, and so on. Opening the file /dev/fd/n is equivalent to duplicating descriptor n, assuming that descriptor n is open.
+
+We can also call creat with a /dev/fd pathname argument as well as specify O_CREAT in a call to open. This allows a program that calls creat to still work if the pathname argument is /dev/fd/1
+
+The main use of the /dev/fd files is from the shell. It allows programs that use pathname arguments to handle standard input and standard output in the same manner as other pathnames.
 
 
 
