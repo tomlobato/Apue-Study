@@ -732,8 +732,286 @@ We can also call creat with a /dev/fd pathname argument as well as specify O_CRE
 The main use of the /dev/fd files is from the shell. It allows programs that use pathname arguments to handle standard input and standard output in the same manner as other pathnames.
 
 
+Files and Directories
+==
+
+##4.2 stat, fstat, fstatat, and lstat Functions
+
+```c
+#include <sys/stat.h>
+int stat(const char *restrict pathname, struct stat *restrict buf );
+int fstat(int fd, struct stat *buf);
+int lstat(const char *restrict pathname, struct stat *restrict buf );
+int fstatat(int fd, const char *restrict pathname, struct stat *restrict buf, int flag);
+```
+
+- Given a pathname, the stat function returns a structure of information about the named file.
+- The fstat function obtains information about the file that is already open on the descriptor fd
+- The lstat function is similar to stat, but when the named file is a symbolic link, lstat returns information about the symbolic link, not the file referenced by the symbolic link
+- The fstatat function provides a way to return the file statistics for a pathname relative to an open directory represented by the fd argument.The flag argument controls whether symbolic links are followed; when the AT_SYMLINK_NOFOLLOW flag is set, fstatat will not follow symbolic links, but rather returns information about the link itself.
+
+mac 10.8 stat struct:
+
+```c
+struct stat {
+	dev_t	 	st_dev;		/* [XSI] ID of device containing file */
+	ino_t	  	st_ino;		/* [XSI] File serial number */
+	mode_t	 	st_mode;	/* [XSI] Mode of file (see below) */
+	nlink_t		st_nlink;	/* [XSI] Number of hard links */
+	uid_t		st_uid;		/* [XSI] User ID of the file */
+	gid_t		st_gid;		/* [XSI] Group ID of the file */
+	dev_t		st_rdev;	/* [XSI] Device ID */
+#if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
+	struct	timespec st_atimespec;	/* time of last access */
+	struct	timespec st_mtimespec;	/* time of last data modification */
+	struct	timespec st_ctimespec;	/* time of last status change */
+#else
+	time_t		st_atime;	/* [XSI] Time of last access */
+	long		st_atimensec;	/* nsec of last access */
+	time_t		st_mtime;	/* [XSI] Last data modification time */
+	long		st_mtimensec;	/* last data modification nsec */
+	time_t		st_ctime;	/* [XSI] Time of last status change */
+	long		st_ctimensec;	/* nsec of last status change */
+#endif
+	off_t		st_size;	/* [XSI] file size, in bytes */
+	blkcnt_t	st_blocks;	/* [XSI] blocks allocated for file */
+	blksize_t	st_blksize;	/* [XSI] optimal blocksize for I/O */
+	__uint32_t	st_flags;	/* user defined flags for file */
+	__uint32_t	st_gen;		/* file generation number */
+	__int32_t	st_lspare;	/* RESERVED: DO NOT USE! */
+	__int64_t	st_qspare[2];	/* RESERVED: DO NOT USE! */
+};
+```
+
+## 4.3 File Types
+
+1. Regular file.
+
+2. Directory file. A file that contains the names of other files and pointers to information on these files. Any process that has read permission for a directory file can read the contents of the directory, but only the kernel can write directly to a directory file. Processes must use the functions described in this chapter to make changes to a directory.
+
+3. Block special file. A type of file providing buffered I/O access in fixed-size units to devices such as disk drives.
+
+4. Character special file. A type of file providing unbuffered I/O access in variable-sized units to devices. **All devices on a system are either block special files or character special files**.
+
+5. FIFO. A type of file used for communication between processes. It’s sometimes called a named pipe. We describe FIFOs in Section 15.5.
+
+6. Socket. A type of file used for network communication between processes. A socket can also be used for non-network communication between processes on a single host.
+
+7. Symbolic link. A type of file that points to another file.
+
+The type of a file is encoded in the st_mode member of the stat structure.
+
+<sys/stat.h>:
+
+```c
+
+// definition example:
+#define  S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+
+S_ISREG()
+S_ISDIR()
+S_ISCHR()
+S_ISBLK()
+S_ISFIFO()
+S_ISLNK()
+S_ISSOCK()
+```
+
+## 4.4 Set-User-ID and Set-Group-ID
+
+Every process has six or more IDs associated with it.
+
+who we really are (These two fields are taken from our entry in the password file when we log in):
+- real user ID 
+- real group ID
+
+used for file access permission checks (i.e.: changed by set-uid/gid bit mechanism):
+- effective user ID
+- effective group ID 
+(supplementary group IDs...)
+
+saved set-group-ID (The saved set-user-ID and saved set-group-ID contain copies of the effective user ID and the effective group ID, respectively, when a program is executed):
+- saved set-user-ID 
+- saved by exec functions
+
+When we execute a program file, the effective user ID of the process is usually the real user ID, and the effective group ID is usually the real group ID. However, we can also set a special flag in the file’s mode word (st_mode) that says, ‘‘When this file is executed, set the effective user ID of the process to be the owner of the file (st_uid).’’ Similarly, we can set another bit in the file’s mode word that causes the effective group ID to be the group owner of the file (st_gid). These two bits in the file’s mode word are called the set-user-ID bit and the set-group-ID bit.
+
+Because a process that is running set-user-ID to some other user usually assumes extra permissions, it must be written carefully.
 
 
+## 4.5 File Access Permissions
 
+Whenever we want to open any type of file by name, we must have execute permission in each directory mentioned in the name,
+
+We cannot create a new file in a directory unless we have write permission and execute permission in the directory.
+
+To delete an existing file, we need write permission and execute permission in the directory containing the file.
+
+Execute permission for a file must be on if we want to execute the file using any of the seven exec functions (Section 8.10). The file also has to be a regular file.
+
+The file access tests that the kernel performs each time a process opens, creates, or deletes a file depend on the owners of the file (st_uid and st_gid), the effective IDs of the process (effective user ID and effective group ID), and the supplementary group IDs of the process, if supported.
+
+The tests performed by the kernel are as follows:
+
+1. root? allow
+2. user/owner? check bit u rwx
+3. group? check bit g rwx
+4. other/world? check bit o rwx
+u=0, g=3, o=6, r=0, w=1, x=2
+
+These four steps are tried in sequence.
+
+
+## 4.6 Ownership of New Files and Directories
+
+The rules for the ownership of a new directory are identical to the rules in this section for the ownership of a new file.
+
+The user ID of a new file is set to the effective user ID of the process.
+
+POSIX.1 allows an implementation to choose one of the following options to determine the group ID of a new file:
+1. The group ID of a new file can be the effective group ID of the process.
+2. The group ID of a new file can be the group ID of the directory in which the file is being created.
+
+FreeBSD 8.0 and Mac OS X 10.6.8 always copy the new file’s group ID from the directory.
+
+Several Linux file systems allow the choice between the two options to be selected using a mount(1) command option.
+
+The default behavior for Linux 3.2.0 and Solaris 10 is to determine the group ID of a new file depending on whether the set-group-ID bit (chmod [u|g]+s dir) is set for the directory in which the file is created.
+
+If this bit is set, the new file’s group ID is copied from the directory; otherwise, the new file’s group ID is set to the effective group ID of the process.
+
+
+## 4.7 access and faccessat Functions
+
+test accessibility based on the real user and group IDs.
+
+```c
+#include <unistd.h>
+int access(const char *pathname, int mode);
+int faccessat(int fd, const char *pathname, int mode, int flag);
+```
+
+F_OK to test if a file exists
+R_OK 
+W_OK
+X_OK
+
+If the AT_EACCESS flag is set, the access checks are made using the effective user and group IDs of the calling process instead of the real user and group IDs.
+
+
+## 4.8 umask Function
+
+```c
+#include <sys/stat.h> 
+mode_t umask(mode_t cmask);
+```
+
+This is one of the few functions that doesn’t have an error return.
+
+The cmask argument is formed as the bitwise OR of any of the nine constants S_I[RWX][USR|GRP|OTH].
+
+
+4.9 chmod, fchmod, and fchmodat Functions
+==
+
+```c
+#include <sys/stat.h>
+int chmod(const char *pathname, mode_t mode);
+int fchmod(int fd, mode_t mode);
+int fchmodat(int fd, const char *pathname, mode_t mode, int flag); // flag: AT_SYMLINK_NOFOLLOW
+```
+
+All three return: 0 if OK, −1 on error
+
+To change the permission bits of a file, the effective user ID of the process must be equal to the owner ID of the file, or the process must have superuser permissions.
+
+mode is the bitwise or of:
+S_ISUID
+S_ISGID
+S_ISVTX
+S_IRWXU
+	S_IRUSR
+	S_IWUSR
+	S_IXUSR
+S_IRWXG
+   S_IRGRP
+   S_IWGRP
+   S_IXGRP
+S_IRWXO
+   S_IROTH
+   S_IWOTH
+   S_IXOTH
+
+The chmod functions automatically clear two of the permission bits under the following conditions:
+
+- On systems, such as Solaris, that place special meaning on the sticky bit when used with regular files, if we try to set the sticky bit (S_ISVTX) on a regular file and do not have superuser privileges, the sticky bit in the mode is automatically turned off.
+
+> In FreeBSD 8.0 and Solaris 10, only the superuser can set the sticky bit on a regular file. Linux 3.2.0 and Mac OS X 10.6.8 place no such restriction on the setting of the sticky bit, because the bit has no meaning when applied to regular files on these systems. Although the bit also has no meaning when applied to regular files on FreeBSD, everyone except the superuser is prevented from setting it on a regular file.
+
+
+- if the group ID of the new file does not equal either the effective group ID of the process or one of the process’s supplementary group IDs and if the process does not have superuser privileges, then the set-group-ID bit is automatically turned off. This prevents a user from creating a set-group-ID file owned by a group that the user doesn’t belong to. 
+
+> FreeBSD 8.0 fails an attempt to set the set-group-ID in this case. The other systems silently turn the bit off, but don’t fail the attempt to change the file access permissions.
+
+FreeBSD 8.0, Linux 3.2.0, Mac OS X 10.6.8, and Solaris 10 add another security feature to try to prevent misuse of some of the protection bits. If a process that does not have superuser privileges writes to a file, the set-user-ID and set-group-ID bits are automatically turned off. If malicious users find a set-group-ID or a set-user-ID file they can write to, even though they can modify the file, they lose the special privileges of the file.
+
+
+## 4.10 Sticky Bit
+
+If the bit is set for a directory, a file in the directory can be removed or renamed only if the user has write permission for the directory and meets one of the following criteria:
+• Owns the file
+• Owns the directory
+• Is the superuser
+
+The saved-text bit is not part of POSIX.1. It is part of the XSI option defined in the Single UNIX Specification, and is supported by FreeBSD 8.0, Linux 3.2.0, Mac OS X 10.6.8, and Solaris 10.
+
+Solaris 10 places special meaning on the sticky bit if it is set on a regular file. In this case, if none of the execute bits is set, the operating system will not cache the contents of the file.
+
+
+4.11 chown, fchown, fchownat, and lchown Functions
+==
+
+```c
+#include <unistd.h>
+int chown(const char *pathname, uid_t owner, gid_t group);
+int fchown(int fd, uid_t owner, gid_t group);
+int fchownat(int fd, const char *pathname, uid_t owner, gid_t group, int flag);
+int lchown(const char *pathname, uid_t owner, gid_t group);
+```
+
+All four return: 0 if OK, −1 on error
+
+Historically, BSD-based systems have enforced the restriction that only the superuser can change the ownership of a file. This is to prevent users from giving away their files to others, thereby defeating any disk space quota restrictions.
+
+POSIX.1 allows either form of operation, depending on the value of _POSIX_CHOWN_RESTRICTED.
+
+If _POSIX_CHOWN_RESTRICTED is in effect for the specified file, then
+1. Only a superuser process can change the user ID of the file.
+2. A nonsuperuser process can change the group ID of the file if the process owns the file (the effective user ID equals the user ID of the file), owner is specified as −1 or equals the user ID of the file, and group equals either the effective group ID of the process or one of the process’s supplementary group IDs.
+
+If these functions are called by a process other than a superuser process, on successful return, both the set-user-ID and the set-group-ID bits are cleared.
+
+## 4.12 File Size
+
+Meaningfull only for regular files, directories, and symbolic links.
+
+FreeBSD 8.0, Mac OS X 10.6.8, and Solaris 10 also define the file size for a pipe as the number of bytes that are available for reading from the pipe. 
+
+For a symbolic link, the file size is the number of bytes in the filename.
+
+Most contemporary UNIX systems provide the fields st_blksize and st_blocks. The first is the preferred block size for I/O for the file, and the latter is the actual number of 512-byte blocks that are allocated.
+
+The standard I/O library, also tries to read or write st_blksize bytes at a time, for efficiency.
+
+## 4.13 File Truncation
+
+```c
+#include <unistd.h>
+int truncate(const char *pathname, off_t length); int ftruncate(int fd, off_t length);
+```
+
+Both return: 0 if OK, −1 on error
+
+If the previous size of the file was greater than length, the data beyond length is no longer accessible. Otherwise, if the previous size was less than length, the file size will increase and the data between the old end of file and the new end of file will read as 0 (i.e., a hole is probably created in the file).
 
 
